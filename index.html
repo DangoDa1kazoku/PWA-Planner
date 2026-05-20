@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Planner" />
+<meta name="theme-color" content="#f4ebd9" />
+<title>Planner</title>
+
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%23f4ebd9'/><rect x='48' y='34' width='90' height='118' rx='6' fill='%238b6f47'/><rect x='54' y='40' width='82' height='106' rx='3' fill='%23fffaf0'/><line x1='66' y1='62' x2='124' y2='62' stroke='%23c9a878' stroke-width='2'/><line x1='66' y1='78' x2='124' y2='78' stroke='%23c9a878' stroke-width='2'/><line x1='66' y1='94' x2='124' y2='94' stroke='%23c9a878' stroke-width='2'/><line x1='66' y1='110' x2='124' y2='110' stroke='%23c9a878' stroke-width='2'/><line x1='66' y1='126' x2='104' y2='126' stroke='%23c9a878' stroke-width='2'/><rect x='44' y='34' width='10' height='118' rx='2' fill='%236b5840'/><circle cx='49' cy='58' r='2.5' fill='%23f4ebd9'/><circle cx='49' cy='90' r='2.5' fill='%23f4ebd9'/><circle cx='49' cy='122' r='2.5' fill='%23f4ebd9'/></svg>" />
+<link rel="manifest" href='data:application/manifest+json,{"name":"Planner","short_name":"Planner","start_url":".","display":"standalone","background_color":"%23f4ebd9","theme_color":"%23f4ebd9"}' />
+
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    color: #3d2f1f;
+    background: #f4ebd9;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(180,140,80,0.08), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(140,100,60,0.06), transparent 50%),
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(120,80,40,0.015) 2px, rgba(120,80,40,0.015) 4px);
+    min-height: 100vh;
+    overscroll-behavior-y: contain;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; padding: 0; }
+  input, textarea, select { font-family: inherit; color: #3d2f1f; }
+  input:focus, textarea:focus, select:focus { outline: none; }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  @media (min-width: 768px) { .wrap { padding: 32px; } }
+
+  .header { text-align: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid rgba(120,80,40,0.2); }
+  .eyebrow { font-size: 11px; letter-spacing: 0.4em; text-transform: uppercase; color: #8b6f47; margin-bottom: 8px; }
+  .title { font-size: 32px; font-style: italic; margin: 0; }
+  .title .year { color: #8b6f47; }
+  @media (min-width: 768px) { .title { font-size: 44px; } }
+
+  .grid { display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 1024px) { .grid { grid-template-columns: 3fr 2fr; gap: 28px; } }
+
+  .card {
+    background: rgba(255,250,240,0.6);
+    border: 1px solid rgba(120,80,40,0.12);
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(120,80,40,0.08), 0 4px 12px rgba(120,80,40,0.04);
+    padding: 16px;
+  }
+  @media (min-width: 768px) { .card { padding: 24px; } }
+
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cal-nav button { padding: 8px; border-radius: 999px; color: #6b5840; transition: transform 0.15s; }
+  .cal-nav button:active { transform: scale(0.9); }
+  .today-btn { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8b6f47; padding: 6px 12px; border-radius: 4px; }
+  .today-btn:active { background: rgba(180,140,80,0.15); }
+
+  .day-headers, .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .day-headers { margin-bottom: 8px; }
+  .day-headers div { text-align: center; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8b6f47; padding: 8px 0; }
+
+  .day-cell {
+    aspect-ratio: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding-top: 4px;
+    border-radius: 6px; position: relative;
+    border: 1px solid transparent;
+    transition: background 0.15s;
+    font-size: 15px;
+    overflow: hidden;
+  }
+  @media (min-width: 768px) { .day-cell { font-size: 17px; padding-top: 6px; } }
+  .day-cell.today { background: rgba(180,140,80,0.15); border-color: rgba(139,111,71,0.4); font-weight: 600; }
+  .day-cell.selected { background: #8b6f47; color: #fffaf0; font-style: italic; font-weight: 600; }
+  .day-cell .num { line-height: 1; }
+  .day-cell .bars { width: 100%; padding: 0 2px; margin-top: 3px; display: flex; flex-direction: column; gap: 2px; }
+  .day-cell .bar { height: 4px; border-radius: 2px; width: 100%; }
+  @media (min-width: 768px) { .day-cell .bar { height: 5px; } }
+
+  .scratch { margin-top: 20px; padding: 20px; background: rgba(255,250,240,0.5); border: 1px solid rgba(120,80,40,0.12); border-radius: 4px; }
+  .label { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8b6f47; margin-bottom: 12px; }
+  .scratch textarea { width: 100%; background: transparent; border: none; resize: none; font-size: 15px; line-height: 1.7; min-height: 100px; }
+
+  .day-panel { padding: 20px; }
+  @media (min-width: 768px) { .day-panel { padding: 24px; } }
+  .day-head { padding-bottom: 16px; border-bottom: 1px solid rgba(120,80,40,0.15); margin-bottom: 20px; }
+  .day-name { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8b6f47; margin-bottom: 4px; }
+  .day-date { font-size: 24px; font-style: italic; }
+
+  .section { margin-bottom: 24px; }
+  .section:last-child { margin-bottom: 0; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .icon-btn { padding: 6px; color: #8b6f47; font-size: 18px; }
+
+  .empty { font-size: 14px; font-style: italic; color: #a89478; padding: 8px 0; }
+
+  .add-event { padding: 16px; border-radius: 4px; background: rgba(180,140,80,0.08); margin-bottom: 12px; }
+  .add-event input[type=text] { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(120,80,40,0.25); padding-bottom: 6px; margin-bottom: 14px; font-size: 15px; }
+  .add-event .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .add-event .row:last-child { margin-bottom: 0; }
+  .field-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #8b6f47; }
+  .field-label .optional { font-style: italic; text-transform: lowercase; letter-spacing: 0.05em; opacity: 0.7; margin-left: 4px; }
+
+  /* Stacked field blocks for date+time pairs */
+  .field-block { margin-bottom: 12px; }
+  .field-block .field-label { display: block; margin-bottom: 6px; }
+  .field-inputs { display: flex; gap: 8px; align-items: center; }
+  .field-inputs input[type=date] { flex: 1.6; min-width: 0; }
+  .field-inputs input[type=time] { flex: 1; min-width: 0; }
+  .divider {
+    height: 1px;
+    background: rgba(120,80,40,0.12);
+    margin: 14px 0;
+  }
+  .add-event input[type=time], .add-event input[type=date] {
+    background: rgba(255,250,240,0.7);
+    border: 1px solid rgba(120,80,40,0.2);
+    border-radius: 4px;
+    padding: 8px 10px;
+    color: #6b5840;
+    font-size: 14px;
+  }
+  .swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+  .swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; transition: transform 0.1s; }
+  .swatch.selected { border-color: #3d2f1f; transform: scale(1.1); }
+  .add-btn { padding: 7px 14px; background: #8b6f47; color: #fffaf0; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; border-radius: 4px; }
+
+  .event-item {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px;
+    border-radius: 4px; margin-bottom: 4px;
+    border-left: 3px solid #8b6f47;
+    background: rgba(255,250,240,0.5);
+    cursor: pointer;
+  }
+  .event-item:active { background: rgba(180,140,80,0.12); }
+  .event-item.editing { background: rgba(180,140,80,0.22); box-shadow: 0 0 0 2px rgba(139,111,71,0.5); }
+
+  .edit-banner {
+    display: none;
+    font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: #fffaf0; background: #8b6f47;
+    padding: 6px 10px; border-radius: 3px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .edit-banner.shown { display: block; }
+  .event-main { flex: 1; min-width: 0; }
+  .event-text { font-size: 15px; line-height: 1.3; }
+  .event-meta { font-size: 11px; color: #8b6f47; margin-top: 3px; letter-spacing: 0.05em; }
+  .del-btn { color: #a89478; padding: 4px 6px; flex-shrink: 0; font-size: 14px; }
+
+  .todo-add { display: flex; gap: 8px; align-items: center; padding-bottom: 8px; margin-bottom: 12px; border-bottom: 1px solid rgba(120,80,40,0.15); }
+  .todo-add input { flex: 1; background: transparent; border: none; font-size: 14px; }
+  .todo-add button { color: #8b6f47; padding: 4px; font-size: 18px; }
+
+  .todo-item { display: flex; align-items: center; gap: 12px; padding: 6px; border-radius: 4px; }
+  .todo-check { width: 18px; height: 18px; border: 1px solid #8b6f47; border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: transparent; }
+  .todo-check.done { background: #8b6f47; }
+  .todo-check.done::after { content: "✓"; color: #fffaf0; font-size: 12px; }
+  .todo-text { flex: 1; font-size: 14px; }
+  .todo-item.done .todo-text { color: #a89478; text-decoration: line-through; }
+
+  .footer { text-align: center; margin-top: 32px; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #a89478; padding-bottom: 16px; }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="eyebrow">— A Personal Planner —</div>
+    <h1 class="title" id="monthTitle"></h1>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div class="cal-nav">
+          <button id="prevMonth" aria-label="Previous month">&#9664;</button>
+          <button id="todayBtn" class="today-btn">Today</button>
+          <button id="nextMonth" aria-label="Next month">&#9654;</button>
+        </div>
+        <div class="day-headers">
+          <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+        </div>
+        <div class="day-grid" id="dayGrid"></div>
+      </div>
+
+```
+  <div class="scratch">
+    <div class="label">✎ Scratch Pad</div>
+    <textarea id="notes" placeholder="thoughts, lists, anything..."></textarea>
+  </div>
+</div>
+
+<div>
+  <div class="card day-panel">
+    <div class="day-head">
+      <div class="day-name" id="selDayName"></div>
+      <div class="day-date" id="selDayDate"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <div class="label" style="margin-bottom:0">◷ Events</div>
+        <button id="toggleAddEvent" class="icon-btn" aria-label="Add event">＋</button>
+      </div>
+      <div id="addEventBox" style="display:none" class="add-event">
+        <div id="editBanner" class="edit-banner">✎ Editing Event</div>
+        <input type="text" id="newEventText" placeholder="What's happening?" />
+
+        <div class="field-block">
+          <span class="field-label">From</span>
+          <div class="field-inputs">
+            <input type="date" id="newEventStart" />
+            <input type="time" id="newEventStartTime" />
+          </div>
+        </div>
+
+        <div class="field-block">
+          <span class="field-label">To <em class="optional">optional</em></span>
+          <div class="field-inputs">
+            <input type="date" id="newEventEnd" />
+            <input type="time" id="newEventEndTime" />
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <span class="field-label">Color</span>
+          <div class="swatches" id="swatches"></div>
+        </div>
+        <div class="row" style="justify-content:flex-end; gap: 8px; margin-top: 14px;">
+          <button id="cancelEditBtn" class="add-btn" style="background: transparent; color: #8b6f47; border: 1px solid rgba(120,80,40,0.25); display: none;">Cancel</button>
+          <button id="confirmAddEvent" class="add-btn">Add Event</button>
+        </div>
+      </div>
+      <div id="eventsList"></div>
+    </div>
+
+    <div class="section">
+      <div class="label">✓ To Do</div>
+      <div class="todo-add">
+        <input type="text" id="newTodoText" placeholder="add a task..." />
+        <button id="addTodoBtn" aria-label="Add task">＋</button>
+      </div>
+      <div id="todosList"></div>
+    </div>
+  </div>
+</div>
+```
+
+  </div>
+
+  <div class="footer">✦ Saved Privately on This Device ✦</div>
+</div>
+
+<script>
+(() => {
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  const COLORS = [
+    { name: 'sand',    value: '#8b6f47' },
+    { name: 'rust',    value: '#b85c38' },
+    { name: 'olive',   value: '#7a8450' },
+    { name: 'sage',    value: '#9caf88' },
+    { name: 'plum',    value: '#7d5874' },
+    { name: 'indigo',  value: '#4a6b8a' },
+    { name: 'rose',    value: '#c97b84' },
+    { name: 'mustard', value: '#c9a14a' },
+  ];
+
+  let current = new Date();
+  let selected = toKey(new Date());
+  let events = loadJSON('planner:events', []);
+  let todos  = loadJSON('planner:todos', {});
+  let newEventColor = COLORS[0].value;
+  let editingId = null; // id of event currently being edited, or null when adding
+
+  // Migrate old format (date-keyed object) -> array of events
+  if (!Array.isArray(events)) {
+    const migrated = [];
+    Object.keys(events).forEach(dateKey => {
+      (events[dateKey] || []).forEach(ev => {
+        migrated.push({
+          id: ev.id || Date.now() + Math.random(),
+          text: ev.text,
+          start: dateKey, end: dateKey,
+          startTime: ev.time || '', endTime: '',
+          color: COLORS[0].value,
+        });
+      });
+    });
+    events = migrated;
+    saveJSON('planner:events', events);
+  }
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function toKey(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+  function keyToDate(k){ const [y,m,d] = k.split('-').map(Number); return new Date(y, m-1, d); }
+  function loadJSON(k, fb){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch { return fb; } }
+  function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) { console.error(e); } }
+
+  function eventsForDate(dateKey){
+    return events.filter(ev => dateKey >= ev.start && dateKey <= ev.end)
+      .sort((a,b) => {
+        const aMulti = a.start !== a.end ? 0 : 1;
+        const bMulti = b.start !== b.end ? 0 : 1;
+        if (aMulti !== bMulti) return aMulti - bMulti;
+        return (a.startTime || 'zz').localeCompare(b.startTime || 'zz');
+      });
+  }
+
+  function renderSwatches(){
+    const wrap = document.getElementById('swatches');
+    wrap.innerHTML = '';
+    COLORS.forEach(c => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'swatch' + (c.value === newEventColor ? ' selected' : '');
+      btn.style.background = c.value;
+      btn.title = c.name;
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        newEventColor = c.value;
+        renderSwatches();
+      });
+      wrap.appendChild(btn);
+    });
+  }
+
+  function renderCalendar(){
+    const y = current.getFullYear(), m = current.getMonth();
+    document.getElementById('monthTitle').innerHTML = `${monthNames[m]} <span class="year">${y}</span>`;
+    const firstDay = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    const todayKey = toKey(new Date());
+    const grid = document.getElementById('dayGrid');
+    grid.innerHTML = '';
+
+    for (let i=0; i<firstDay; i++){
+      const blank = document.createElement('div');
+      blank.style.aspectRatio = '1';
+      grid.appendChild(blank);
+    }
+    for (let d=1; d<=daysInMonth; d++){
+      const key = `${y}-${pad(m+1)}-${pad(d)}`;
+      const cell = document.createElement('button');
+      cell.className = 'day-cell';
+      if (key === todayKey) cell.classList.add('today');
+      if (key === selected) cell.classList.add('selected');
+
+      const num = document.createElement('span');
+      num.className = 'num';
+      num.textContent = d;
+      cell.appendChild(num);
+
+      const dayEvents = eventsForDate(key);
+      if (dayEvents.length){
+        const bars = document.createElement('div');
+        bars.className = 'bars';
+        dayEvents.slice(0, 3).forEach(ev => {
+          const bar = document.createElement('div');
+          bar.className = 'bar';
+          bar.style.background = ev.color || '#8b6f47';
+          bars.appendChild(bar);
+        });
+        cell.appendChild(bars);
+      }
+
+      cell.addEventListener('click', () => { selected = key; renderCalendar(); renderDay(); });
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderDay(){
+    const dateObj = keyToDate(selected);
+    document.getElementById('selDayName').textContent = dateObj.toLocaleDateString('en-US',{weekday:'long'});
+    document.getElementById('selDayDate').textContent = `${monthNames[dateObj.getMonth()]} ${dateObj.getDate()}`;
+
+    const evList = document.getElementById('eventsList');
+    evList.innerHTML = '';
+    const evs = eventsForDate(selected);
+    if (evs.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'nothing planned';
+      evList.appendChild(empty);
+    } else {
+      evs.forEach(ev => {
+        const row = document.createElement('div');
+        row.className = 'event-item';
+        row.style.borderLeftColor = ev.color || '#8b6f47';
+
+        const main = document.createElement('div');
+        main.className = 'event-main';
+
+        const txt = document.createElement('div');
+        txt.className = 'event-text';
+        txt.textContent = ev.text;
+        main.appendChild(txt);
+
+        const metaParts = [];
+        const multiDay = ev.start !== ev.end;
+        if (multiDay){
+          const s = keyToDate(ev.start), e = keyToDate(ev.end);
+          metaParts.push(`${monthNames[s.getMonth()].slice(0,3)} ${s.getDate()} → ${monthNames[e.getMonth()].slice(0,3)} ${e.getDate()}`);
+          if (ev.startTime && selected === ev.start) metaParts.push(`starts ${ev.startTime}`);
+          if (ev.endTime && selected === ev.end) metaParts.push(`ends ${ev.endTime}`);
+        } else {
+          if (ev.startTime && ev.endTime) metaParts.push(`${ev.startTime} – ${ev.endTime}`);
+          else if (ev.startTime) metaParts.push(ev.startTime);
+        }
+        if (metaParts.length){
+          const meta = document.createElement('div');
+          meta.className = 'event-meta';
+          meta.textContent = metaParts.join('  ·  ');
+          main.appendChild(meta);
+        }
+
+        row.appendChild(main);
+
+        const del = document.createElement('button');
+        del.className = 'del-btn';
+        del.textContent = '✕';
+        del.addEventListener('click', (e) => {
+          e.stopPropagation();
+          events = events.filter(x => x.id !== ev.id);
+          saveJSON('planner:events', events);
+          if (editingId === ev.id) closeEventForm();
+          renderCalendar(); renderDay();
+        });
+        row.appendChild(del);
+
+        // Tap the row (anywhere except delete) to edit — but ignore if already editing this one
+        if (editingId === ev.id) row.classList.add('editing');
+        row.addEventListener('click', () => {
+          if (editingId === ev.id) return; // already editing — don't reset form
+          openEventFormForEdit(ev);
+        });
+
+        evList.appendChild(row);
+      });
+    }
+
+    const tdList = document.getElementById('todosList');
+    tdList.innerHTML = '';
+    const tds = todos[selected] || [];
+    if (tds.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'no tasks yet';
+      tdList.appendChild(empty);
+    } else {
+      tds.forEach(t => {
+        const row = document.createElement('div');
+        row.className = 'todo-item' + (t.done ? ' done' : '');
+        const chk = document.createElement('button');
+        chk.className = 'todo-check' + (t.done ? ' done' : '');
+        chk.addEventListener('click', () => {
+          todos[selected] = todos[selected].map(x => x.id === t.id ? {...x, done: !x.done} : x);
+          saveJSON('planner:todos', todos); renderDay();
+        });
+        row.appendChild(chk);
+        const txt = document.createElement('span');
+        txt.className = 'todo-text';
+        txt.textContent = t.text;
+        row.appendChild(txt);
+        const del = document.createElement('button');
+        del.className = 'del-btn';
+        del.textContent = '🗑';
+        del.style.fontSize = '13px';
+        del.addEventListener('click', () => {
+          todos[selected] = (todos[selected]||[]).filter(x => x.id !== t.id);
+          if (todos[selected].length === 0) delete todos[selected];
+          saveJSON('planner:todos', todos);
+          renderDay();
+        });
+        row.appendChild(del);
+        tdList.appendChild(row);
+      });
+    }
+  }
+
+  document.getElementById('prevMonth').addEventListener('click', () => {
+    current = new Date(current.getFullYear(), current.getMonth()-1, 1); renderCalendar();
+  });
+  document.getElementById('nextMonth').addEventListener('click', () => {
+    current = new Date(current.getFullYear(), current.getMonth()+1, 1); renderCalendar();
+  });
+  document.getElementById('todayBtn').addEventListener('click', () => {
+    const t = new Date(); current = t; selected = toKey(t); renderCalendar(); renderDay();
+  });
+
+  const addBox = document.getElementById('addEventBox');
+  const confirmBtn = document.getElementById('confirmAddEvent');
+  const cancelBtn = document.getElementById('cancelEditBtn');
+
+  function closeEventForm(){
+    addBox.style.display = 'none';
+    editingId = null;
+    confirmBtn.textContent = 'Add Event';
+    cancelBtn.style.display = 'none';
+    document.getElementById('editBanner').classList.remove('shown');
+    document.getElementById('newEventText').value = '';
+    document.getElementById('newEventEnd').value = '';
+    document.getElementById('newEventStartTime').value = '';
+    document.getElementById('newEventEndTime').value = '';
+    renderDay(); // remove editing highlight
+  }
+
+  function openEventFormForAdd(){
+    editingId = null;
+    confirmBtn.textContent = 'Add Event';
+    cancelBtn.style.display = 'none';
+    document.getElementById('editBanner').classList.remove('shown');
+    addBox.style.display = 'block';
+    document.getElementById('newEventStart').value = selected;
+    document.getElementById('newEventEnd').value = '';
+    document.getElementById('newEventStartTime').value = '';
+    document.getElementById('newEventEndTime').value = '';
+    document.getElementById('newEventText').value = '';
+    newEventColor = COLORS[0].value;
+    renderSwatches();
+    document.getElementById('newEventText').focus();
+  }
+
+  function openEventFormForEdit(ev){
+    editingId = ev.id;
+    confirmBtn.textContent = 'Save Changes';
+    cancelBtn.style.display = 'inline-block';
+    document.getElementById('editBanner').classList.add('shown');
+    addBox.style.display = 'block';
+    document.getElementById('newEventText').value = ev.text || '';
+    document.getElementById('newEventStart').value = ev.start || selected;
+    document.getElementById('newEventEnd').value = (ev.end && ev.end !== ev.start) ? ev.end : '';
+    document.getElementById('newEventStartTime').value = ev.startTime || '';
+    document.getElementById('newEventEndTime').value = ev.endTime || '';
+    newEventColor = ev.color || COLORS[0].value;
+    renderSwatches();
+    renderDay(); // highlight the edited row
+    addBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  document.getElementById('toggleAddEvent').addEventListener('click', () => {
+    if (addBox.style.display === 'block') {
+      closeEventForm();
+    } else {
+      openEventFormForAdd();
+    }
+  });
+
+  cancelBtn.addEventListener('click', closeEventForm);
+
+  // Keep end date >= start date: bump end forward if user picks a later start
+  document.getElementById('newEventStart').addEventListener('change', (e) => {
+    const startVal = e.target.value;
+    const endEl = document.getElementById('newEventEnd');
+    if (endEl.value && endEl.value < startVal) endEl.value = startVal;
+    endEl.min = startVal || '';
+  });
+
+  function doAddEvent(){
+    const txt = document.getElementById('newEventText').value.trim();
+    let start = document.getElementById('newEventStart').value || selected;
+    let end = document.getElementById('newEventEnd').value;
+    const startTime = document.getElementById('newEventStartTime').value;
+    const endTime = document.getElementById('newEventEndTime').value;
+    if (!txt) return;
+    if (!end || end < start) end = start;
+
+    if (editingId != null) {
+      // Update existing event
+      events = events.map(ev => ev.id === editingId
+        ? { ...ev, text: txt, start, end, startTime, endTime, color: newEventColor }
+        : ev);
+    } else {
+      // Create new event
+      events.push({ id: Date.now(), text: txt, start, end, startTime, endTime, color: newEventColor });
+    }
+    saveJSON('planner:events', events);
+    closeEventForm();
+    renderCalendar(); renderDay();
+  }
+  document.getElementById('confirmAddEvent').addEventListener('click', doAddEvent);
+  document.getElementById('newEventText').addEventListener('keydown', e => { if (e.key === 'Enter') doAddEvent(); });
+
+  function doAddTodo(){
+    const txt = document.getElementById('newTodoText').value.trim();
+    if (!txt) return;
+    todos[selected] = todos[selected] || [];
+    todos[selected].push({id: Date.now(), text: txt, done: false});
+    saveJSON('planner:todos', todos);
+    document.getElementById('newTodoText').value = '';
+    renderDay();
+  }
+  document.getElementById('addTodoBtn').addEventListener('click', doAddTodo);
+  document.getElementById('newTodoText').addEventListener('keydown', e => { if (e.key === 'Enter') doAddTodo(); });
+
+  const notesEl = document.getElementById('notes');
+  notesEl.value = localStorage.getItem('planner:notes') || '';
+  notesEl.addEventListener('input', () => { localStorage.setItem('planner:notes', notesEl.value); });
+
+  renderSwatches();
+  renderCalendar();
+  renderDay();
+})();
+</script>
+
+</body>
+</html>
