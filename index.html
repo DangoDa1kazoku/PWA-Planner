@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Planner" />
+<meta name="theme-color" content="#f4ebd9" />
+<title>Planner</title>
+
+<!-- App icon (inline SVG, used by iOS when added to home screen) -->
+
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%23f4ebd9'/><text x='50%' y='58%' text-anchor='middle' font-family='Georgia,serif' font-size='90' font-style='italic' fill='%238b6f47'>P</text></svg>" />
+
+<!-- Minimal manifest inline so it works without a server -->
+
+<link rel="manifest" href='data:application/manifest+json,{"name":"Planner","short_name":"Planner","start_url":".","display":"standalone","background_color":"%23f4ebd9","theme_color":"%23f4ebd9"}' />
+
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    color: #3d2f1f;
+    background: #f4ebd9;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(180,140,80,0.08), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(140,100,60,0.06), transparent 50%),
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(120,80,40,0.015) 2px, rgba(120,80,40,0.015) 4px);
+    min-height: 100vh;
+    overscroll-behavior-y: contain;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; padding: 0; }
+  input, textarea { font-family: inherit; color: #3d2f1f; }
+  input:focus, textarea:focus { outline: none; }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  @media (min-width: 768px) { .wrap { padding: 32px; } }
+
+  .header { text-align: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid rgba(120,80,40,0.2); }
+  .eyebrow { font-size: 11px; letter-spacing: 0.4em; text-transform: uppercase; color: #8b6f47; margin-bottom: 8px; }
+  .title { font-size: 32px; font-style: italic; margin: 0; }
+  .title .year { color: #8b6f47; }
+  @media (min-width: 768px) { .title { font-size: 44px; } }
+
+  .grid { display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 1024px) { .grid { grid-template-columns: 3fr 2fr; gap: 28px; } }
+
+  .card {
+    background: rgba(255,250,240,0.6);
+    border: 1px solid rgba(120,80,40,0.12);
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(120,80,40,0.08), 0 4px 12px rgba(120,80,40,0.04);
+    padding: 16px;
+  }
+  @media (min-width: 768px) { .card { padding: 24px; } }
+
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cal-nav button { padding: 8px; border-radius: 999px; color: #6b5840; transition: transform 0.15s; }
+  .cal-nav button:active { transform: scale(0.9); }
+  .today-btn { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8b6f47; padding: 6px 12px; border-radius: 4px; }
+  .today-btn:active { background: rgba(180,140,80,0.15); }
+
+  .day-headers, .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .day-headers { margin-bottom: 8px; }
+  .day-headers div { text-align: center; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8b6f47; padding: 8px 0; }
+
+  .day-cell {
+    aspect-ratio: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border-radius: 6px; position: relative;
+    border: 1px solid transparent;
+    transition: background 0.15s;
+    font-size: 16px;
+  }
+  @media (min-width: 768px) { .day-cell { font-size: 18px; } }
+  .day-cell.today { background: rgba(180,140,80,0.15); border-color: rgba(139,111,71,0.4); font-weight: 600; }
+  .day-cell.selected { background: #8b6f47; color: #fffaf0; font-style: italic; font-weight: 600; }
+  .day-cell .dot { position: absolute; bottom: 4px; width: 4px; height: 4px; border-radius: 50%; background: #8b6f47; }
+  .day-cell.selected .dot { background: #fffaf0; }
+
+  .scratch { margin-top: 20px; padding: 20px; background: rgba(255,250,240,0.5); border: 1px solid rgba(120,80,40,0.12); border-radius: 4px; }
+  .label { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8b6f47; margin-bottom: 12px; }
+  .scratch textarea { width: 100%; background: transparent; border: none; resize: none; font-size: 15px; line-height: 1.7; min-height: 100px; }
+
+  .day-panel { padding: 20px; }
+  @media (min-width: 768px) { .day-panel { padding: 24px; } }
+  .day-head { padding-bottom: 16px; border-bottom: 1px solid rgba(120,80,40,0.15); margin-bottom: 20px; }
+  .day-name { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8b6f47; margin-bottom: 4px; }
+  .day-date { font-size: 24px; font-style: italic; }
+
+  .section { margin-bottom: 24px; }
+  .section:last-child { margin-bottom: 0; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .icon-btn { padding: 6px; color: #8b6f47; }
+
+  .empty { font-size: 14px; font-style: italic; color: #a89478; padding: 8px 0; }
+
+  .add-event { padding: 12px; border-radius: 4px; background: rgba(180,140,80,0.08); margin-bottom: 12px; }
+  .add-event input[type=text] { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(120,80,40,0.25); padding-bottom: 4px; margin-bottom: 8px; font-size: 15px; }
+  .add-event .row { display: flex; gap: 8px; align-items: center; }
+  .add-event input[type=time] { background: transparent; border: none; color: #6b5840; font-size: 14px; }
+  .add-btn { margin-left: auto; padding: 6px 12px; background: #8b6f47; color: #fffaf0; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; border-radius: 4px; }
+
+  .event-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px; border-radius: 4px; }
+  .event-item:active { background: rgba(180,140,80,0.08); }
+  .event-time { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; color: #8b6f47; margin-top: 2px; flex-shrink: 0; }
+  .event-text { flex: 1; font-size: 15px; }
+  .del-btn { color: #a89478; padding: 4px; flex-shrink: 0; }
+
+  .todo-add { display: flex; gap: 8px; align-items: center; padding-bottom: 8px; margin-bottom: 12px; border-bottom: 1px solid rgba(120,80,40,0.15); }
+  .todo-add input { flex: 1; background: transparent; border: none; font-size: 14px; }
+  .todo-add button { color: #8b6f47; padding: 4px; }
+
+  .todo-item { display: flex; align-items: center; gap: 12px; padding: 6px; border-radius: 4px; }
+  .todo-check { width: 18px; height: 18px; border: 1px solid #8b6f47; border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: transparent; }
+  .todo-check.done { background: #8b6f47; }
+  .todo-check.done::after { content: "✓"; color: #fffaf0; font-size: 12px; }
+  .todo-text { flex: 1; font-size: 14px; }
+  .todo-item.done .todo-text { color: #a89478; text-decoration: line-through; }
+
+  .footer { text-align: center; margin-top: 32px; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #a89478; padding-bottom: 16px; }
+
+  .install-hint { margin-top: 12px; font-size: 11px; color: #a89478; }
+  .install-hint a { color: #8b6f47; }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="eyebrow">— A Personal Planner —</div>
+    <h1 class="title" id="monthTitle"></h1>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div class="cal-nav">
+          <button id="prevMonth" aria-label="Previous month">&#9664;</button>
+          <button id="todayBtn" class="today-btn">Today</button>
+          <button id="nextMonth" aria-label="Next month">&#9654;</button>
+        </div>
+        <div class="day-headers">
+          <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+        </div>
+        <div class="day-grid" id="dayGrid"></div>
+      </div>
+
+```
+  <div class="scratch">
+    <div class="label">✎ Scratch Pad</div>
+    <textarea id="notes" placeholder="thoughts, lists, anything..."></textarea>
+  </div>
+</div>
+
+<div>
+  <div class="card day-panel">
+    <div class="day-head">
+      <div class="day-name" id="selDayName"></div>
+      <div class="day-date" id="selDayDate"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <div class="label" style="margin-bottom:0">◷ Events</div>
+        <button id="toggleAddEvent" class="icon-btn" aria-label="Add event">＋</button>
+      </div>
+      <div id="addEventBox" style="display:none" class="add-event">
+        <input type="text" id="newEventText" placeholder="What's happening?" />
+        <div class="row">
+          <input type="time" id="newEventTime" />
+          <button id="confirmAddEvent" class="add-btn">Add</button>
+        </div>
+      </div>
+      <div id="eventsList"></div>
+    </div>
+
+    <div class="section">
+      <div class="label">✓ To Do</div>
+      <div class="todo-add">
+        <input type="text" id="newTodoText" placeholder="add a task..." />
+        <button id="addTodoBtn" aria-label="Add task">＋</button>
+      </div>
+      <div id="todosList"></div>
+    </div>
+  </div>
+</div>
+```
+
+  </div>
+
+  <div class="footer">✦ Saved Privately on This Device ✦</div>
+</div>
+
+<script>
+(() => {
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  // State
+  let current = new Date();
+  let selected = toKey(new Date());
+  let events = loadJSON('planner:events', {});
+  let todos  = loadJSON('planner:todos', {});
+
+  // Helpers
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function toKey(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+  function loadJSON(k, fb){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch { return fb; } }
+  function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) { console.error(e); } }
+
+  // Render calendar
+  function renderCalendar(){
+    const y = current.getFullYear(), m = current.getMonth();
+    document.getElementById('monthTitle').innerHTML = `${monthNames[m]} <span class="year">${y}</span>`;
+    const firstDay = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    const todayKey = toKey(new Date());
+    const grid = document.getElementById('dayGrid');
+    grid.innerHTML = '';
+
+    for (let i=0; i<firstDay; i++){
+      const blank = document.createElement('div');
+      blank.style.aspectRatio = '1';
+      grid.appendChild(blank);
+    }
+    for (let d=1; d<=daysInMonth; d++){
+      const key = `${y}-${pad(m+1)}-${pad(d)}`;
+      const cell = document.createElement('button');
+      cell.className = 'day-cell';
+      if (key === todayKey) cell.classList.add('today');
+      if (key === selected) cell.classList.add('selected');
+      cell.textContent = d;
+      const has = (events[key]?.length || todos[key]?.length);
+      if (has){
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        cell.appendChild(dot);
+      }
+      cell.addEventListener('click', () => { selected = key; renderCalendar(); renderDay(); });
+      grid.appendChild(cell);
+    }
+  }
+
+  // Render selected day's events + todos
+  function renderDay(){
+    const [y,m,d] = selected.split('-').map(Number);
+    const dateObj = new Date(y, m-1, d);
+    document.getElementById('selDayName').textContent = dateObj.toLocaleDateString('en-US',{weekday:'long'});
+    document.getElementById('selDayDate').textContent = `${monthNames[m-1]} ${d}`;
+
+    // Events
+    const evList = document.getElementById('eventsList');
+    evList.innerHTML = '';
+    const evs = (events[selected] || []).slice().sort((a,b)=>(a.time||'zz').localeCompare(b.time||'zz'));
+    if (evs.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'nothing planned';
+      evList.appendChild(empty);
+    } else {
+      evs.forEach(ev => {
+        const row = document.createElement('div');
+        row.className = 'event-item';
+        if (ev.time){
+          const t = document.createElement('span');
+          t.className = 'event-time';
+          t.textContent = ev.time;
+          row.appendChild(t);
+        }
+        const txt = document.createElement('span');
+        txt.className = 'event-text';
+        txt.textContent = ev.text;
+        row.appendChild(txt);
+        const del = document.createElement('button');
+        del.className = 'del-btn';
+        del.textContent = '✕';
+        del.addEventListener('click', () => {
+          events[selected] = (events[selected]||[]).filter(x => x.id !== ev.id);
+          if (events[selected].length === 0) delete events[selected];
+          saveJSON('planner:events', events);
+          renderCalendar(); renderDay();
+        });
+        row.appendChild(del);
+        evList.appendChild(row);
+      });
+    }
+
+    // Todos
+    const tdList = document.getElementById('todosList');
+    tdList.innerHTML = '';
+    const tds = todos[selected] || [];
+    if (tds.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'no tasks yet';
+      tdList.appendChild(empty);
+    } else {
+      tds.forEach(t => {
+        const row = document.createElement('div');
+        row.className = 'todo-item' + (t.done ? ' done' : '');
+        const chk = document.createElement('button');
+        chk.className = 'todo-check' + (t.done ? ' done' : '');
+        chk.addEventListener('click', () => {
+          todos[selected] = todos[selected].map(x => x.id === t.id ? {...x, done: !x.done} : x);
+          saveJSON('planner:todos', todos); renderDay();
+        });
+        row.appendChild(chk);
+        const txt = document.createElement('span');
+        txt.className = 'todo-text';
+        txt.textContent = t.text;
+        row.appendChild(txt);
+        const del = document.createElement('button');
+        del.className = 'del-btn';
+        del.textContent = '🗑';
+        del.style.fontSize = '13px';
+        del.addEventListener('click', () => {
+          todos[selected] = (todos[selected]||[]).filter(x => x.id !== t.id);
+          if (todos[selected].length === 0) delete todos[selected];
+          saveJSON('planner:todos', todos);
+          renderCalendar(); renderDay();
+        });
+        row.appendChild(del);
+        tdList.appendChild(row);
+      });
+    }
+  }
+
+  // Wire up controls
+  document.getElementById('prevMonth').addEventListener('click', () => {
+    current = new Date(current.getFullYear(), current.getMonth()-1, 1); renderCalendar();
+  });
+  document.getElementById('nextMonth').addEventListener('click', () => {
+    current = new Date(current.getFullYear(), current.getMonth()+1, 1); renderCalendar();
+  });
+  document.getElementById('todayBtn').addEventListener('click', () => {
+    const t = new Date(); current = t; selected = toKey(t); renderCalendar(); renderDay();
+  });
+
+  const addBox = document.getElementById('addEventBox');
+  document.getElementById('toggleAddEvent').addEventListener('click', () => {
+    const open = addBox.style.display === 'block';
+    addBox.style.display = open ? 'none' : 'block';
+    if (!open) document.getElementById('newEventText').focus();
+  });
+  function doAddEvent(){
+    const txt = document.getElementById('newEventText').value.trim();
+    const time = document.getElementById('newEventTime').value;
+    if (!txt) return;
+    events[selected] = events[selected] || [];
+    events[selected].push({id: Date.now(), text: txt, time: time});
+    saveJSON('planner:events', events);
+    document.getElementById('newEventText').value = '';
+    document.getElementById('newEventTime').value = '';
+    addBox.style.display = 'none';
+    renderCalendar(); renderDay();
+  }
+  document.getElementById('confirmAddEvent').addEventListener('click', doAddEvent);
+  document.getElementById('newEventText').addEventListener('keydown', e => { if (e.key === 'Enter') doAddEvent(); });
+
+  function doAddTodo(){
+    const txt = document.getElementById('newTodoText').value.trim();
+    if (!txt) return;
+    todos[selected] = todos[selected] || [];
+    todos[selected].push({id: Date.now(), text: txt, done: false});
+    saveJSON('planner:todos', todos);
+    document.getElementById('newTodoText').value = '';
+    renderCalendar(); renderDay();
+  }
+  document.getElementById('addTodoBtn').addEventListener('click', doAddTodo);
+  document.getElementById('newTodoText').addEventListener('keydown', e => { if (e.key === 'Enter') doAddTodo(); });
+
+  // Notes
+  const notesEl = document.getElementById('notes');
+  notesEl.value = localStorage.getItem('planner:notes') || '';
+  notesEl.addEventListener('input', () => { localStorage.setItem('planner:notes', notesEl.value); });
+
+  renderCalendar();
+  renderDay();
+})();
+</script>
+
+</body>
+</html>
