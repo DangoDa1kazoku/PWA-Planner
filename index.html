@@ -105,6 +105,18 @@
   .add-event .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
   .add-event .row:last-child { margin-bottom: 0; }
   .field-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #8b6f47; margin-right: 4px; }
+  .field-label .optional { font-style: italic; text-transform: lowercase; letter-spacing: 0.05em; opacity: 0.7; margin-left: 2px; }
+  .date-grid {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr;
+    gap: 8px 10px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .date-grid input[type=date], .date-grid input[type=time] {
+    width: 100%;
+    min-width: 0;
+  }
   .add-event input[type=time], .add-event input[type=date] {
     background: rgba(255,250,240,0.7);
     border: 1px solid rgba(120,80,40,0.2);
@@ -123,8 +135,10 @@
     border-radius: 4px; margin-bottom: 4px;
     border-left: 3px solid #8b6f47;
     background: rgba(255,250,240,0.5);
+    cursor: pointer;
   }
   .event-item:active { background: rgba(180,140,80,0.12); }
+  .event-item.editing { background: rgba(180,140,80,0.18); box-shadow: 0 0 0 1px rgba(139,111,71,0.3); }
   .event-main { flex: 1; min-width: 0; }
   .event-text { font-size: 15px; line-height: 1.3; }
   .event-meta { font-size: 11px; color: #8b6f47; margin-top: 3px; letter-spacing: 0.05em; }
@@ -187,21 +201,21 @@
       </div>
       <div id="addEventBox" style="display:none" class="add-event">
         <input type="text" id="newEventText" placeholder="What's happening?" />
-        <div class="row">
+        <div class="date-grid">
           <span class="field-label">From</span>
           <input type="date" id="newEventStart" />
           <input type="time" id="newEventStartTime" />
-        </div>
-        <div class="row">
-          <span class="field-label">To</span>
+
+          <span class="field-label">To <em class="optional">(optional)</em></span>
           <input type="date" id="newEventEnd" />
           <input type="time" id="newEventEndTime" />
         </div>
-        <div class="row">
+        <div class="row" style="margin-top: 10px;">
           <span class="field-label">Color</span>
           <div class="swatches" id="swatches"></div>
         </div>
-        <div class="row" style="justify-content:flex-end">
+        <div class="row" style="justify-content:flex-end; gap: 8px;">
+          <button id="cancelEditBtn" class="add-btn" style="background: transparent; color: #8b6f47; border: 1px solid rgba(120,80,40,0.25); display: none;">Cancel</button>
           <button id="confirmAddEvent" class="add-btn">Add Event</button>
         </div>
       </div>
@@ -245,6 +259,7 @@
   let events = loadJSON('planner:events', []);
   let todos  = loadJSON('planner:todos', {});
   let newEventColor = COLORS[0].value;
+  let editingId = null; // id of event currently being edited, or null when adding
 
   // Migrate old format (date-keyed object) -> array of events
   if (!Array.isArray(events)) {
@@ -387,12 +402,19 @@
         const del = document.createElement('button');
         del.className = 'del-btn';
         del.textContent = '✕';
-        del.addEventListener('click', () => {
+        del.addEventListener('click', (e) => {
+          e.stopPropagation();
           events = events.filter(x => x.id !== ev.id);
           saveJSON('planner:events', events);
+          if (editingId === ev.id) closeEventForm();
           renderCalendar(); renderDay();
         });
         row.appendChild(del);
+
+        // Tap the row (anywhere except delete) to edit
+        if (editingId === ev.id) row.classList.add('editing');
+        row.addEventListener('click', () => openEventFormForEdit(ev));
+
         evList.appendChild(row);
       });
     }
@@ -447,27 +469,83 @@
   });
 
   const addBox = document.getElementById('addEventBox');
+  const confirmBtn = document.getElementById('confirmAddEvent');
+  const cancelBtn = document.getElementById('cancelEditBtn');
+
+  function closeEventForm(){
+    addBox.style.display = 'none';
+    editingId = null;
+    confirmBtn.textContent = 'Add Event';
+    cancelBtn.style.display = 'none';
+    document.getElementById('newEventText').value = '';
+    document.getElementById('newEventEnd').value = '';
+    document.getElementById('newEventStartTime').value = '';
+    document.getElementById('newEventEndTime').value = '';
+    renderDay(); // remove editing highlight
+  }
+
+  function openEventFormForAdd(){
+    editingId = null;
+    confirmBtn.textContent = 'Add Event';
+    cancelBtn.style.display = 'none';
+    addBox.style.display = 'block';
+    document.getElementById('newEventStart').value = selected;
+    document.getElementById('newEventEnd').value = '';
+    document.getElementById('newEventStartTime').value = '';
+    document.getElementById('newEventEndTime').value = '';
+    document.getElementById('newEventText').value = '';
+    newEventColor = COLORS[0].value;
+    renderSwatches();
+    document.getElementById('newEventText').focus();
+  }
+
+  function openEventFormForEdit(ev){
+    editingId = ev.id;
+    confirmBtn.textContent = 'Save Changes';
+    cancelBtn.style.display = 'inline-block';
+    addBox.style.display = 'block';
+    document.getElementById('newEventText').value = ev.text || '';
+    document.getElementById('newEventStart').value = ev.start || selected;
+    document.getElementById('newEventEnd').value = (ev.end && ev.end !== ev.start) ? ev.end : '';
+    document.getElementById('newEventStartTime').value = ev.startTime || '';
+    document.getElementById('newEventEndTime').value = ev.endTime || '';
+    newEventColor = ev.color || COLORS[0].value;
+    renderSwatches();
+    renderDay(); // highlight the edited row
+    addBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
   document.getElementById('toggleAddEvent').addEventListener('click', () => {
-    const open = addBox.style.display === 'block';
-    addBox.style.display = open ? 'none' : 'block';
-    if (!open) {
-      document.getElementById('newEventStart').value = selected;
-      document.getElementById('newEventEnd').value = selected;
-      document.getElementById('newEventText').focus();
+    if (addBox.style.display === 'block') {
+      closeEventForm();
+    } else {
+      openEventFormForAdd();
     }
+  });
+
+  cancelBtn.addEventListener('click', closeEventForm);
+
+  // Keep end date >= start date: bump end forward if user picks a later start
+  document.getElementById('newEventStart').addEventListener('change', (e) => {
+    const startVal = e.target.value;
+    const endEl = document.getElementById('newEventEnd');
+    if (endEl.value && endEl.value < startVal) endEl.value = startVal;
+    endEl.min = startVal || '';
   });
 
   function doAddEvent(){
     const txt = document.getElementById('newEventText').value.trim();
     let start = document.getElementById('newEventStart').value || selected;
-    let end = document.getElementById('newEventEnd').value || start;
+    let end = document.getElementById('newEventEnd').value;
     const startTime = document.getElementById('newEventStartTime').value;
     const endTime = document.getElementById('newEventEndTime').value;
     if (!txt) return;
-    if (end < start) end = start;
+    // End date is optional — if blank or before start, treat as same day
+    if (!end || end < start) end = start;
     events.push({ id: Date.now(), text: txt, start, end, startTime, endTime, color: newEventColor });
     saveJSON('planner:events', events);
     document.getElementById('newEventText').value = '';
+    document.getElementById('newEventEnd').value = '';
     document.getElementById('newEventStartTime').value = '';
     document.getElementById('newEventEndTime').value = '';
     addBox.style.display = 'none';
