@@ -11,12 +11,7 @@
 <meta name="theme-color" content="#f4ebd9" />
 <title>Planner</title>
 
-<!-- App icon (inline SVG, used by iOS when added to home screen) -->
-
 <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%23f4ebd9'/><text x='50%' y='58%' text-anchor='middle' font-family='Georgia,serif' font-size='90' font-style='italic' fill='%238b6f47'>P</text></svg>" />
-
-<!-- Minimal manifest inline so it works without a server -->
-
 <link rel="manifest" href='data:application/manifest+json,{"name":"Planner","short_name":"Planner","start_url":".","display":"standalone","background_color":"%23f4ebd9","theme_color":"%23f4ebd9"}' />
 
 <style>
@@ -36,8 +31,8 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
   button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; padding: 0; }
-  input, textarea { font-family: inherit; color: #3d2f1f; }
-  input:focus, textarea:focus { outline: none; }
+  input, textarea, select { font-family: inherit; color: #3d2f1f; }
+  input:focus, textarea:focus, select:focus { outline: none; }
 
   .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
   @media (min-width: 768px) { .wrap { padding: 32px; } }
@@ -72,17 +67,21 @@
 
   .day-cell {
     aspect-ratio: 1;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding-top: 4px;
     border-radius: 6px; position: relative;
     border: 1px solid transparent;
     transition: background 0.15s;
-    font-size: 16px;
+    font-size: 15px;
+    overflow: hidden;
   }
-  @media (min-width: 768px) { .day-cell { font-size: 18px; } }
+  @media (min-width: 768px) { .day-cell { font-size: 17px; padding-top: 6px; } }
   .day-cell.today { background: rgba(180,140,80,0.15); border-color: rgba(139,111,71,0.4); font-weight: 600; }
   .day-cell.selected { background: #8b6f47; color: #fffaf0; font-style: italic; font-weight: 600; }
-  .day-cell .dot { position: absolute; bottom: 4px; width: 4px; height: 4px; border-radius: 50%; background: #8b6f47; }
-  .day-cell.selected .dot { background: #fffaf0; }
+  .day-cell .num { line-height: 1; }
+  .day-cell .bars { width: 100%; padding: 0 2px; margin-top: 3px; display: flex; flex-direction: column; gap: 2px; }
+  .day-cell .bar { height: 4px; border-radius: 2px; width: 100%; }
+  @media (min-width: 768px) { .day-cell .bar { height: 5px; } }
 
   .scratch { margin-top: 20px; padding: 20px; background: rgba(255,250,240,0.5); border: 1px solid rgba(120,80,40,0.12); border-radius: 4px; }
   .label { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8b6f47; margin-bottom: 12px; }
@@ -97,25 +96,43 @@
   .section { margin-bottom: 24px; }
   .section:last-child { margin-bottom: 0; }
   .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .icon-btn { padding: 6px; color: #8b6f47; }
+  .icon-btn { padding: 6px; color: #8b6f47; font-size: 18px; }
 
   .empty { font-size: 14px; font-style: italic; color: #a89478; padding: 8px 0; }
 
-  .add-event { padding: 12px; border-radius: 4px; background: rgba(180,140,80,0.08); margin-bottom: 12px; }
-  .add-event input[type=text] { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(120,80,40,0.25); padding-bottom: 4px; margin-bottom: 8px; font-size: 15px; }
-  .add-event .row { display: flex; gap: 8px; align-items: center; }
-  .add-event input[type=time] { background: transparent; border: none; color: #6b5840; font-size: 14px; }
-  .add-btn { margin-left: auto; padding: 6px 12px; background: #8b6f47; color: #fffaf0; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; border-radius: 4px; }
+  .add-event { padding: 14px; border-radius: 4px; background: rgba(180,140,80,0.08); margin-bottom: 12px; }
+  .add-event input[type=text] { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(120,80,40,0.25); padding-bottom: 6px; margin-bottom: 10px; font-size: 15px; }
+  .add-event .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .add-event .row:last-child { margin-bottom: 0; }
+  .field-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #8b6f47; margin-right: 4px; }
+  .add-event input[type=time], .add-event input[type=date] {
+    background: rgba(255,250,240,0.7);
+    border: 1px solid rgba(120,80,40,0.2);
+    border-radius: 3px;
+    padding: 4px 6px;
+    color: #6b5840;
+    font-size: 13px;
+  }
+  .swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+  .swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; transition: transform 0.1s; }
+  .swatch.selected { border-color: #3d2f1f; transform: scale(1.1); }
+  .add-btn { padding: 7px 14px; background: #8b6f47; color: #fffaf0; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; border-radius: 4px; }
 
-  .event-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px; border-radius: 4px; }
-  .event-item:active { background: rgba(180,140,80,0.08); }
-  .event-time { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; color: #8b6f47; margin-top: 2px; flex-shrink: 0; }
-  .event-text { flex: 1; font-size: 15px; }
-  .del-btn { color: #a89478; padding: 4px; flex-shrink: 0; }
+  .event-item {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px;
+    border-radius: 4px; margin-bottom: 4px;
+    border-left: 3px solid #8b6f47;
+    background: rgba(255,250,240,0.5);
+  }
+  .event-item:active { background: rgba(180,140,80,0.12); }
+  .event-main { flex: 1; min-width: 0; }
+  .event-text { font-size: 15px; line-height: 1.3; }
+  .event-meta { font-size: 11px; color: #8b6f47; margin-top: 3px; letter-spacing: 0.05em; }
+  .del-btn { color: #a89478; padding: 4px 6px; flex-shrink: 0; font-size: 14px; }
 
   .todo-add { display: flex; gap: 8px; align-items: center; padding-bottom: 8px; margin-bottom: 12px; border-bottom: 1px solid rgba(120,80,40,0.15); }
   .todo-add input { flex: 1; background: transparent; border: none; font-size: 14px; }
-  .todo-add button { color: #8b6f47; padding: 4px; }
+  .todo-add button { color: #8b6f47; padding: 4px; font-size: 18px; }
 
   .todo-item { display: flex; align-items: center; gap: 12px; padding: 6px; border-radius: 4px; }
   .todo-check { width: 18px; height: 18px; border: 1px solid #8b6f47; border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: transparent; }
@@ -125,9 +142,6 @@
   .todo-item.done .todo-text { color: #a89478; text-decoration: line-through; }
 
   .footer { text-align: center; margin-top: 32px; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #a89478; padding-bottom: 16px; }
-
-  .install-hint { margin-top: 12px; font-size: 11px; color: #a89478; }
-  .install-hint a { color: #8b6f47; }
 </style>
 
 </head>
@@ -174,8 +188,21 @@
       <div id="addEventBox" style="display:none" class="add-event">
         <input type="text" id="newEventText" placeholder="What's happening?" />
         <div class="row">
-          <input type="time" id="newEventTime" />
-          <button id="confirmAddEvent" class="add-btn">Add</button>
+          <span class="field-label">From</span>
+          <input type="date" id="newEventStart" />
+          <input type="time" id="newEventStartTime" />
+        </div>
+        <div class="row">
+          <span class="field-label">To</span>
+          <input type="date" id="newEventEnd" />
+          <input type="time" id="newEventEndTime" />
+        </div>
+        <div class="row">
+          <span class="field-label">Color</span>
+          <div class="swatches" id="swatches"></div>
+        </div>
+        <div class="row" style="justify-content:flex-end">
+          <button id="confirmAddEvent" class="add-btn">Add Event</button>
         </div>
       </div>
       <div id="eventsList"></div>
@@ -202,19 +229,70 @@
 (() => {
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-  // State
+  const COLORS = [
+    { name: 'sand',    value: '#8b6f47' },
+    { name: 'rust',    value: '#b85c38' },
+    { name: 'olive',   value: '#7a8450' },
+    { name: 'sage',    value: '#9caf88' },
+    { name: 'plum',    value: '#7d5874' },
+    { name: 'indigo',  value: '#4a6b8a' },
+    { name: 'rose',    value: '#c97b84' },
+    { name: 'mustard', value: '#c9a14a' },
+  ];
+
   let current = new Date();
   let selected = toKey(new Date());
-  let events = loadJSON('planner:events', {});
+  let events = loadJSON('planner:events', []);
   let todos  = loadJSON('planner:todos', {});
+  let newEventColor = COLORS[0].value;
 
-  // Helpers
+  // Migrate old format (date-keyed object) -> array of events
+  if (!Array.isArray(events)) {
+    const migrated = [];
+    Object.keys(events).forEach(dateKey => {
+      (events[dateKey] || []).forEach(ev => {
+        migrated.push({
+          id: ev.id || Date.now() + Math.random(),
+          text: ev.text,
+          start: dateKey, end: dateKey,
+          startTime: ev.time || '', endTime: '',
+          color: COLORS[0].value,
+        });
+      });
+    });
+    events = migrated;
+    saveJSON('planner:events', events);
+  }
+
   function pad(n){ return String(n).padStart(2,'0'); }
   function toKey(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+  function keyToDate(k){ const [y,m,d] = k.split('-').map(Number); return new Date(y, m-1, d); }
   function loadJSON(k, fb){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch { return fb; } }
   function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) { console.error(e); } }
 
-  // Render calendar
+  function eventsForDate(dateKey){
+    return events.filter(ev => dateKey >= ev.start && dateKey <= ev.end)
+      .sort((a,b) => {
+        const aMulti = a.start !== a.end ? 0 : 1;
+        const bMulti = b.start !== b.end ? 0 : 1;
+        if (aMulti !== bMulti) return aMulti - bMulti;
+        return (a.startTime || 'zz').localeCompare(b.startTime || 'zz');
+      });
+  }
+
+  function renderSwatches(){
+    const wrap = document.getElementById('swatches');
+    wrap.innerHTML = '';
+    COLORS.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'swatch' + (c.value === newEventColor ? ' selected' : '');
+      btn.style.background = c.value;
+      btn.title = c.name;
+      btn.addEventListener('click', () => { newEventColor = c.value; renderSwatches(); });
+      wrap.appendChild(btn);
+    });
+  }
+
   function renderCalendar(){
     const y = current.getFullYear(), m = current.getMonth();
     document.getElementById('monthTitle').innerHTML = `${monthNames[m]} <span class="year">${y}</span>`;
@@ -235,29 +313,38 @@
       cell.className = 'day-cell';
       if (key === todayKey) cell.classList.add('today');
       if (key === selected) cell.classList.add('selected');
-      cell.textContent = d;
-      const has = (events[key]?.length || todos[key]?.length);
-      if (has){
-        const dot = document.createElement('span');
-        dot.className = 'dot';
-        cell.appendChild(dot);
+
+      const num = document.createElement('span');
+      num.className = 'num';
+      num.textContent = d;
+      cell.appendChild(num);
+
+      const dayEvents = eventsForDate(key);
+      if (dayEvents.length){
+        const bars = document.createElement('div');
+        bars.className = 'bars';
+        dayEvents.slice(0, 3).forEach(ev => {
+          const bar = document.createElement('div');
+          bar.className = 'bar';
+          bar.style.background = ev.color || '#8b6f47';
+          bars.appendChild(bar);
+        });
+        cell.appendChild(bars);
       }
+
       cell.addEventListener('click', () => { selected = key; renderCalendar(); renderDay(); });
       grid.appendChild(cell);
     }
   }
 
-  // Render selected day's events + todos
   function renderDay(){
-    const [y,m,d] = selected.split('-').map(Number);
-    const dateObj = new Date(y, m-1, d);
+    const dateObj = keyToDate(selected);
     document.getElementById('selDayName').textContent = dateObj.toLocaleDateString('en-US',{weekday:'long'});
-    document.getElementById('selDayDate').textContent = `${monthNames[m-1]} ${d}`;
+    document.getElementById('selDayDate').textContent = `${monthNames[dateObj.getMonth()]} ${dateObj.getDate()}`;
 
-    // Events
     const evList = document.getElementById('eventsList');
     evList.innerHTML = '';
-    const evs = (events[selected] || []).slice().sort((a,b)=>(a.time||'zz').localeCompare(b.time||'zz'));
+    const evs = eventsForDate(selected);
     if (evs.length === 0){
       const empty = document.createElement('div');
       empty.className = 'empty';
@@ -267,22 +354,41 @@
       evs.forEach(ev => {
         const row = document.createElement('div');
         row.className = 'event-item';
-        if (ev.time){
-          const t = document.createElement('span');
-          t.className = 'event-time';
-          t.textContent = ev.time;
-          row.appendChild(t);
-        }
-        const txt = document.createElement('span');
+        row.style.borderLeftColor = ev.color || '#8b6f47';
+
+        const main = document.createElement('div');
+        main.className = 'event-main';
+
+        const txt = document.createElement('div');
         txt.className = 'event-text';
         txt.textContent = ev.text;
-        row.appendChild(txt);
+        main.appendChild(txt);
+
+        const metaParts = [];
+        const multiDay = ev.start !== ev.end;
+        if (multiDay){
+          const s = keyToDate(ev.start), e = keyToDate(ev.end);
+          metaParts.push(`${monthNames[s.getMonth()].slice(0,3)} ${s.getDate()} → ${monthNames[e.getMonth()].slice(0,3)} ${e.getDate()}`);
+          if (ev.startTime && selected === ev.start) metaParts.push(`starts ${ev.startTime}`);
+          if (ev.endTime && selected === ev.end) metaParts.push(`ends ${ev.endTime}`);
+        } else {
+          if (ev.startTime && ev.endTime) metaParts.push(`${ev.startTime} – ${ev.endTime}`);
+          else if (ev.startTime) metaParts.push(ev.startTime);
+        }
+        if (metaParts.length){
+          const meta = document.createElement('div');
+          meta.className = 'event-meta';
+          meta.textContent = metaParts.join('  ·  ');
+          main.appendChild(meta);
+        }
+
+        row.appendChild(main);
+
         const del = document.createElement('button');
         del.className = 'del-btn';
         del.textContent = '✕';
         del.addEventListener('click', () => {
-          events[selected] = (events[selected]||[]).filter(x => x.id !== ev.id);
-          if (events[selected].length === 0) delete events[selected];
+          events = events.filter(x => x.id !== ev.id);
           saveJSON('planner:events', events);
           renderCalendar(); renderDay();
         });
@@ -291,7 +397,6 @@
       });
     }
 
-    // Todos
     const tdList = document.getElementById('todosList');
     tdList.innerHTML = '';
     const tds = todos[selected] || [];
@@ -323,7 +428,7 @@
           todos[selected] = (todos[selected]||[]).filter(x => x.id !== t.id);
           if (todos[selected].length === 0) delete todos[selected];
           saveJSON('planner:todos', todos);
-          renderCalendar(); renderDay();
+          renderDay();
         });
         row.appendChild(del);
         tdList.appendChild(row);
@@ -331,7 +436,6 @@
     }
   }
 
-  // Wire up controls
   document.getElementById('prevMonth').addEventListener('click', () => {
     current = new Date(current.getFullYear(), current.getMonth()-1, 1); renderCalendar();
   });
@@ -346,17 +450,26 @@
   document.getElementById('toggleAddEvent').addEventListener('click', () => {
     const open = addBox.style.display === 'block';
     addBox.style.display = open ? 'none' : 'block';
-    if (!open) document.getElementById('newEventText').focus();
+    if (!open) {
+      document.getElementById('newEventStart').value = selected;
+      document.getElementById('newEventEnd').value = selected;
+      document.getElementById('newEventText').focus();
+    }
   });
+
   function doAddEvent(){
     const txt = document.getElementById('newEventText').value.trim();
-    const time = document.getElementById('newEventTime').value;
+    let start = document.getElementById('newEventStart').value || selected;
+    let end = document.getElementById('newEventEnd').value || start;
+    const startTime = document.getElementById('newEventStartTime').value;
+    const endTime = document.getElementById('newEventEndTime').value;
     if (!txt) return;
-    events[selected] = events[selected] || [];
-    events[selected].push({id: Date.now(), text: txt, time: time});
+    if (end < start) end = start;
+    events.push({ id: Date.now(), text: txt, start, end, startTime, endTime, color: newEventColor });
     saveJSON('planner:events', events);
     document.getElementById('newEventText').value = '';
-    document.getElementById('newEventTime').value = '';
+    document.getElementById('newEventStartTime').value = '';
+    document.getElementById('newEventEndTime').value = '';
     addBox.style.display = 'none';
     renderCalendar(); renderDay();
   }
@@ -370,16 +483,16 @@
     todos[selected].push({id: Date.now(), text: txt, done: false});
     saveJSON('planner:todos', todos);
     document.getElementById('newTodoText').value = '';
-    renderCalendar(); renderDay();
+    renderDay();
   }
   document.getElementById('addTodoBtn').addEventListener('click', doAddTodo);
   document.getElementById('newTodoText').addEventListener('keydown', e => { if (e.key === 'Enter') doAddTodo(); });
 
-  // Notes
   const notesEl = document.getElementById('notes');
   notesEl.value = localStorage.getItem('planner:notes') || '';
   notesEl.addEventListener('input', () => { localStorage.setItem('planner:notes', notesEl.value); });
 
+  renderSwatches();
   renderCalendar();
   renderDay();
 })();
