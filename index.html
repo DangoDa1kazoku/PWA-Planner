@@ -100,30 +100,31 @@
 
   .empty { font-size: 14px; font-style: italic; color: #a89478; padding: 8px 0; }
 
-  .add-event { padding: 14px; border-radius: 4px; background: rgba(180,140,80,0.08); margin-bottom: 12px; }
-  .add-event input[type=text] { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(120,80,40,0.25); padding-bottom: 6px; margin-bottom: 10px; font-size: 15px; }
+  .add-event { padding: 16px; border-radius: 4px; background: rgba(180,140,80,0.08); margin-bottom: 12px; }
+  .add-event input[type=text] { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(120,80,40,0.25); padding-bottom: 6px; margin-bottom: 14px; font-size: 15px; }
   .add-event .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
   .add-event .row:last-child { margin-bottom: 0; }
-  .field-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #8b6f47; margin-right: 4px; }
-  .field-label .optional { font-style: italic; text-transform: lowercase; letter-spacing: 0.05em; opacity: 0.7; margin-left: 2px; }
-  .date-grid {
-    display: grid;
-    grid-template-columns: auto 1fr 1fr;
-    gap: 8px 10px;
-    align-items: center;
-    margin-bottom: 8px;
-  }
-  .date-grid input[type=date], .date-grid input[type=time] {
-    width: 100%;
-    min-width: 0;
+  .field-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #8b6f47; }
+  .field-label .optional { font-style: italic; text-transform: lowercase; letter-spacing: 0.05em; opacity: 0.7; margin-left: 4px; }
+
+  /* Stacked field blocks for date+time pairs */
+  .field-block { margin-bottom: 12px; }
+  .field-block .field-label { display: block; margin-bottom: 6px; }
+  .field-inputs { display: flex; gap: 8px; align-items: center; }
+  .field-inputs input[type=date] { flex: 1.6; min-width: 0; }
+  .field-inputs input[type=time] { flex: 1; min-width: 0; }
+  .divider {
+    height: 1px;
+    background: rgba(120,80,40,0.12);
+    margin: 14px 0;
   }
   .add-event input[type=time], .add-event input[type=date] {
     background: rgba(255,250,240,0.7);
     border: 1px solid rgba(120,80,40,0.2);
-    border-radius: 3px;
-    padding: 4px 6px;
+    border-radius: 4px;
+    padding: 8px 10px;
     color: #6b5840;
-    font-size: 13px;
+    font-size: 14px;
   }
   .swatches { display: flex; gap: 6px; flex-wrap: wrap; }
   .swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; transition: transform 0.1s; }
@@ -138,7 +139,17 @@
     cursor: pointer;
   }
   .event-item:active { background: rgba(180,140,80,0.12); }
-  .event-item.editing { background: rgba(180,140,80,0.18); box-shadow: 0 0 0 1px rgba(139,111,71,0.3); }
+  .event-item.editing { background: rgba(180,140,80,0.22); box-shadow: 0 0 0 2px rgba(139,111,71,0.5); }
+
+  .edit-banner {
+    display: none;
+    font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: #fffaf0; background: #8b6f47;
+    padding: 6px 10px; border-radius: 3px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .edit-banner.shown { display: block; }
   .event-main { flex: 1; min-width: 0; }
   .event-text { font-size: 15px; line-height: 1.3; }
   .event-meta { font-size: 11px; color: #8b6f47; margin-top: 3px; letter-spacing: 0.05em; }
@@ -200,21 +211,32 @@
         <button id="toggleAddEvent" class="icon-btn" aria-label="Add event">＋</button>
       </div>
       <div id="addEventBox" style="display:none" class="add-event">
+        <div id="editBanner" class="edit-banner">✎ Editing Event</div>
         <input type="text" id="newEventText" placeholder="What's happening?" />
-        <div class="date-grid">
-          <span class="field-label">From</span>
-          <input type="date" id="newEventStart" />
-          <input type="time" id="newEventStartTime" />
 
-          <span class="field-label">To <em class="optional">(optional)</em></span>
-          <input type="date" id="newEventEnd" />
-          <input type="time" id="newEventEndTime" />
+        <div class="field-block">
+          <span class="field-label">From</span>
+          <div class="field-inputs">
+            <input type="date" id="newEventStart" />
+            <input type="time" id="newEventStartTime" />
+          </div>
         </div>
-        <div class="row" style="margin-top: 10px;">
+
+        <div class="field-block">
+          <span class="field-label">To <em class="optional">optional</em></span>
+          <div class="field-inputs">
+            <input type="date" id="newEventEnd" />
+            <input type="time" id="newEventEndTime" />
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
           <span class="field-label">Color</span>
           <div class="swatches" id="swatches"></div>
         </div>
-        <div class="row" style="justify-content:flex-end; gap: 8px;">
+        <div class="row" style="justify-content:flex-end; gap: 8px; margin-top: 14px;">
           <button id="cancelEditBtn" class="add-btn" style="background: transparent; color: #8b6f47; border: 1px solid rgba(120,80,40,0.25); display: none;">Cancel</button>
           <button id="confirmAddEvent" class="add-btn">Add Event</button>
         </div>
@@ -300,10 +322,16 @@
     wrap.innerHTML = '';
     COLORS.forEach(c => {
       const btn = document.createElement('button');
+      btn.type = 'button';
       btn.className = 'swatch' + (c.value === newEventColor ? ' selected' : '');
       btn.style.background = c.value;
       btn.title = c.name;
-      btn.addEventListener('click', () => { newEventColor = c.value; renderSwatches(); });
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        newEventColor = c.value;
+        renderSwatches();
+      });
       wrap.appendChild(btn);
     });
   }
@@ -411,9 +439,12 @@
         });
         row.appendChild(del);
 
-        // Tap the row (anywhere except delete) to edit
+        // Tap the row (anywhere except delete) to edit — but ignore if already editing this one
         if (editingId === ev.id) row.classList.add('editing');
-        row.addEventListener('click', () => openEventFormForEdit(ev));
+        row.addEventListener('click', () => {
+          if (editingId === ev.id) return; // already editing — don't reset form
+          openEventFormForEdit(ev);
+        });
 
         evList.appendChild(row);
       });
@@ -477,6 +508,7 @@
     editingId = null;
     confirmBtn.textContent = 'Add Event';
     cancelBtn.style.display = 'none';
+    document.getElementById('editBanner').classList.remove('shown');
     document.getElementById('newEventText').value = '';
     document.getElementById('newEventEnd').value = '';
     document.getElementById('newEventStartTime').value = '';
@@ -488,6 +520,7 @@
     editingId = null;
     confirmBtn.textContent = 'Add Event';
     cancelBtn.style.display = 'none';
+    document.getElementById('editBanner').classList.remove('shown');
     addBox.style.display = 'block';
     document.getElementById('newEventStart').value = selected;
     document.getElementById('newEventEnd').value = '';
@@ -503,6 +536,7 @@
     editingId = ev.id;
     confirmBtn.textContent = 'Save Changes';
     cancelBtn.style.display = 'inline-block';
+    document.getElementById('editBanner').classList.add('shown');
     addBox.style.display = 'block';
     document.getElementById('newEventText').value = ev.text || '';
     document.getElementById('newEventStart').value = ev.start || selected;
@@ -540,15 +574,19 @@
     const startTime = document.getElementById('newEventStartTime').value;
     const endTime = document.getElementById('newEventEndTime').value;
     if (!txt) return;
-    // End date is optional — if blank or before start, treat as same day
     if (!end || end < start) end = start;
-    events.push({ id: Date.now(), text: txt, start, end, startTime, endTime, color: newEventColor });
+
+    if (editingId != null) {
+      // Update existing event
+      events = events.map(ev => ev.id === editingId
+        ? { ...ev, text: txt, start, end, startTime, endTime, color: newEventColor }
+        : ev);
+    } else {
+      // Create new event
+      events.push({ id: Date.now(), text: txt, start, end, startTime, endTime, color: newEventColor });
+    }
     saveJSON('planner:events', events);
-    document.getElementById('newEventText').value = '';
-    document.getElementById('newEventEnd').value = '';
-    document.getElementById('newEventStartTime').value = '';
-    document.getElementById('newEventEndTime').value = '';
-    addBox.style.display = 'none';
+    closeEventForm();
     renderCalendar(); renderDay();
   }
   document.getElementById('confirmAddEvent').addEventListener('click', doAddEvent);
